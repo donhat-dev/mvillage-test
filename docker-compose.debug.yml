@@ -1,0 +1,15 @@
+# Development overlay — adds debugpy and dev mode
+# Usage: docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d web
+services:
+  web:
+    image: ${COMPOSE_PROJECT_NAME:-odoo}-web-debug:18.0
+    build:
+      target: debug
+    command:
+      - --dev
+      - xml
+    environment:
+      - ODOO_ENABLE_DEBUGPY=1
+      - DEBUGPY_PORT=${DEBUGPY_PORT:-5678}
+    ports:
+      - "${DEBUGPY_PORT:-5678}:5678"

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sale_quotation_approval.TaxTotalsField"
+       t-inherit="account.TaxTotalsField"
+       t-inherit-mode="extension">
+        <xpath expr="//tr[.//span[@name='amount_total']]" position="after">
+            <tr t-if="props.record.data.total_cost !== undefined">
+                <td class="o_td_label">
+                    <label class="o_form_label o_tax_total_label">Total Cost</label>
+                </td>
+                <td class="o_list_monetary">
+                    <span style="white-space: nowrap;font-weight: 500;"
+                          t-out="formatMonetary(props.record.data.total_cost || 0)"/>
+                </td>
+            </tr>
+        </xpath>
+    </t>
+
+</templates>

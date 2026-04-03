@@ -1,0 +1,9 @@
+/var/log/odoo/odoo-server.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

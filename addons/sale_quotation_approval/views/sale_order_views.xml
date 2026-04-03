@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- ============================================================ -->
+	<!-- Form view: approval buttons, statusbar, cost fields          -->
+	<!-- ============================================================ -->
+	<record id="view_order_form_inherit_approval" model="ir.ui.view">
+		<field name="name">sale.order.form.inherit.approval</field>
+		<field name="model">sale.order</field>
+		<field name="inherit_id" ref="sale.view_order_form"/>
+		<field name="arch" type="xml">
+			<!-- Approval buttons in header, before the state statusbar -->
+			<xpath expr="//header/field[@name='state']" position="before">
+				<field name="can_approve" invisible="1"/>
+				<field name="can_reject" invisible="1"/>
+				<field name="total_cost" invisible="1"/>
+				<button name="action_request_approval" string="Submit Approval" type="object" class="btn-primary" invisible="not approval_level or approval_state not in (False, 'rejected') or user_id != uid"/>
+				<button name="action_leader_approve" string="Team Lead Approve" type="object" class="btn-primary" invisible="approval_state != 'pending' or not can_approve"/>
+				<button name="action_sale_manager_approve" string="Sales Manager Approve" type="object" class="btn-primary" invisible="approval_state != 'team_leader_approved' or not can_approve"/>
+				<button name="action_finance_manager_approve" string="Finance Manager Approve" type="object" class="btn-primary" invisible="approval_state != 'manager_approved' or not can_approve"/>
+				<button name="action_reject" string="Reject" type="object" class="btn-secondary" invisible="not can_reject"/>
+			</xpath>
+			<xpath expr="//header//button[@name='action_quotation_send']" position="attributes">
+				<attribute name="invisible" add="approval_level and approval_state != 'approved'" separator=" or "/>
+			</xpath>
+			<xpath expr="//header//button[@name='action_confirm']" position="attributes">
+				<attribute name="invisible" add="approval_level and approval_state != 'approved'" separator=" or "/>
+			</xpath>
+			<!-- Approval ribbons -->
+			<xpath expr="//div[hasclass('oe_title')]" position="before">
+				<field name="approval_level" invisible="1"/>
+				<widget name="web_ribbon" title="Pending Approval" bg_color="text-bg-warning" invisible="approval_state != 'pending'"/>
+				<widget name="web_ribbon" title="Waiting Manager" bg_color="text-bg-info" invisible="approval_state != 'team_leader_approved'"/>
+				<widget name="web_ribbon" title="Waiting Finance" bg_color="text-bg-info" invisible="approval_state != 'manager_approved'"/>
+				<widget name="web_ribbon" title="Approved" bg_color="text-bg-success" invisible="approval_state != 'approved'"/>
+				<widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger" invisible="approval_state != 'rejected'"/>
+			</xpath>
+			<!-- Cost column in order lines tree -->
+			<xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="before">
+				<field name="cost_total" string="Cost" optional="show"/>
+			</xpath>
+			<!-- Make order lines readonly once approval starts -->
+			<xpath expr="//field[@name='order_line']" position="attributes">
+				<attribute name="readonly">state == 'cancel' or locked or (approval_state and approval_state != 'rejected')</attribute>
+			</xpath>
+		</field>
+	</record>
+	<!-- ============================================================ -->
+	<!-- Tree view: add approval_state column                         -->
+	<!-- ============================================================ -->
+	<record id="view_order_tree_inherit_approval" model="ir.ui.view">
+		<field name="name">sale.order.tree.inherit.approval</field>
+		<field name="model">sale.order</field>
+		<field name="inherit_id" ref="sale.sale_order_tree"/>
+		<field name="arch" type="xml">
+			<xpath expr="//field[@name='amount_total']" position="after">
+				<field name="approval_state" decoration-warning="approval_state in ('pending', 'team_leader_approved', 'manager_approved')" decoration-success="approval_state == 'approved'" decoration-danger="approval_state == 'rejected'" widget="badge" optional="show"/>
+			</xpath>
+		</field>
+	</record>
+</odoo>
