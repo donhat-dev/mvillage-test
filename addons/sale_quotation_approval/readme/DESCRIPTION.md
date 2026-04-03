@@ -1,12 +1,18 @@
 # Sale Quotation Approval
 
-Adds multi-level approval workflow for sale quotations based on cost margin analysis.
+Adds a margin-based approval workflow for sale quotations in Odoo 18
+Community.
 
 **Features:**
 
-- Cost field on sale order lines (based on product's standard price)
-- Total Cost summary on sale order
-- Multi-level approval workflow:
-  - No approval needed when margin > 50%
-  - Team Leader approval when margin ≤ 50%
-  - Full 3-level approval (Team Leader → Sales Manager → Finance Manager) when selling below cost
+- Computed **Cost** field on each sale order line (`standard_price ×
+  quantity`)
+- Aggregated **Total Cost** on the sale order
+- Automatic approval-level determination based on the relationship
+  between Total Cost and Total Amount
+- **Send by Email** and **Confirm** blocked until the required approval
+  is obtained
+- Sequential approval through Team Leader, Sales Manager, and Finance
+  Manager
+- Approval status displayed on form view (ribbon), list view (badge),
+  and tracked via Odoo chatter

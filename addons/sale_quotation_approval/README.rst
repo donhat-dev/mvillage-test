@@ -31,19 +31,22 @@ Sale Quotation Approval
 Sale Quotation Approval
 =======================
 
-Adds multi-level approval workflow for sale quotations based on cost
-margin analysis.
+Adds a margin-based approval workflow for sale quotations in Odoo 18
+Community.
 
 **Features:**
 
-- Cost field on sale order lines (based on product's standard price)
-- Total Cost summary on sale order
-- Multi-level approval workflow:
-
-  - No approval needed when margin > 50%
-  - Team Leader approval when margin ≤ 50%
-  - Full 3-level approval (Team Leader → Sales Manager → Finance
-    Manager) when selling below cost
+- Computed **Cost** field on each sale order line
+  (``standard_price × quantity``)
+- Aggregated **Total Cost** on the sale order
+- Automatic approval-level determination based on the relationship
+  between Total Cost and Total Amount
+- **Send by Email** and **Confirm** blocked until the required approval
+  is obtained
+- Sequential approval through Team Leader, Sales Manager, and Finance
+  Manager
+- Approval status displayed on form view (ribbon), list view (badge),
+  and tracked via Odoo chatter
 
 **Table of contents**
 
@@ -61,16 +64,18 @@ No extra Python dependencies are required.
 Configuration
 =============
 
-After installing the module, assign users to the appropriate approval
-groups under **Settings → Users & Companies → Users → (select user) →
-Other**:
+After installing the module, configure approvers according to the
+business roles used by the implementation:
 
-- **Quotation Approval / Team Leader** — can approve quotations that
-  require Team Leader sign-off.
-- **Quotation Approval / Sales Manager** — can approve at the Sales
-  Manager level in the full 3-level flow.
-- **Quotation Approval / Finance Manager** — provides the final approval
-  when selling below cost.
+- **Sales Person** — the quotation owner (``user_id`` on
+  ``sale.order``), using the standard sales user access rights.
+- **Team Leader** — the first approver, resolved from the sales team
+  assigned to the quotation (``team_id.user_id``). Configure this under
+  **Sales → Configuration → Sales Teams**.
+- **Sales Manager** — a user in the ``sales_team.group_sale_manager``
+  group, who approves the second step of the full 3-level flow.
+- **Finance Manager** — a user in the ``account.group_account_manager``
+  group, who provides the final approval when selling at or below cost.
 
 Products must have a **Cost** (``standard_price``) set for the approval
 level to be computed correctly.
@@ -88,40 +93,39 @@ the tax totals.
 Approval workflow
 -----------------
 
-When a salesperson creates or modifies a quotation, the system
-automatically computes the required **Approval Level** based on margin:
+When a Sales Person creates or modifies a quotation, the system
+automatically computes the required **Approval Level** based on the
+relationship between Total Cost and Total Amount:
 
-+--------------------------+----------------+--------------------------+
-| Condition                | Approval Level | Flow                     |
-+==========================+================+==========================+
-| Total Cost < 66.7 % of   | None           | Confirm directly         |
-| Amount Total (margin >   |                |                          |
-| 50 %)                    |                |                          |
-+--------------------------+----------------+--------------------------+
-| Total Cost ≥ 66.7 % of   | Team Leader    | Team Leader → Confirm    |
-| Amount Total (margin ≤   |                |                          |
-| 50 %)                    |                |                          |
-+--------------------------+----------------+--------------------------+
-| Total Cost ≥ Amount      | Full 3-Level   | Team Leader → Sales      |
-| Total (selling at or     |                | Manager → Finance        |
-| below cost)              |                | Manager → Confirm        |
-+--------------------------+----------------+--------------------------+
++-------------------------------------------------+----------------+--------------------------+
+| Condition                                       | Approval Level | Flow                     |
++=================================================+================+==========================+
+| ``Total Amount > Total Cost + 50 % Total Cost`` | None           | Send or confirm directly |
++-------------------------------------------------+----------------+--------------------------+
+| ``Total Amount ≤ Total Cost + 50 % Total Cost`` | Team Leader    | Team Leader approves →   |
+| **and** ``Total Amount > Total Cost``           |                | continue                 |
++-------------------------------------------------+----------------+--------------------------+
+| ``Total Cost ≥ Total Amount``                   | Full 3-Level   | Team Leader → Sales      |
+|                                                 |                | Manager → Finance        |
+|                                                 |                | Manager                  |
++-------------------------------------------------+----------------+--------------------------+
 
 Step-by-step
 ~~~~~~~~~~~~
 
-1. Salesperson clicks **Request Approval** on the quotation.
+1. Sales Person clicks **Submit Approval** on the quotation.
 2. The quotation enters *Pending Approval* state; order lines become
    read-only.
-3. The Team Leader clicks **Approve** (or **Reject**).
+3. The Team Leader of the assigned sales team clicks **Team Lead
+   Approve** (or **Reject**).
 4. If the approval level is *Full 3-Level*, the flow continues to Sales
    Manager and then Finance Manager.
-5. Once fully approved, the salesperson can **Confirm** the quotation as
-   usual.
+5. Once fully approved, the Sales Person can **Send by Email** or
+   **Confirm** the quotation as usual.
 
-A **Reject** at any stage resets the state to *Rejected*. The
-salesperson can revise the quotation and click **Submit Approval** to
-re-submit.
+A **Reject** at any stage resets the state to *Rejected*. The Sales
+Person can click **Reset Approval**, revise the quotation, and submit it
+again from the beginning.
 
 List view
 ---------

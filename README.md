@@ -15,13 +15,46 @@ This module extends `sale.order` and `sale.order.line` to enforce a margin-based
 - Sequential approval through Team Leader, Sales Manager, and Finance Manager.
 - Approval status displayed on form view (ribbon), list view (badge), and tracked via Odoo chatter.
 
-### Approval logic summary
+### Approval logic
 
 | Condition | Approval level | Flow |
 | --- | --- | --- |
 | `Total Amount > Total Cost + 50 % Total Cost` | None | Send or confirm directly |
 | `Total Amount ≤ Total Cost + 50 % Total Cost` **and** `Total Amount > Total Cost` | Team Leader | Team Leader approves → continue |
 | `Total Cost ≥ Total Amount` | Full 3-level | Team Leader → Sales Manager → Finance Manager |
+
+### Role resolution
+
+The original requirements do not specify which Odoo groups map to each role. This implementation applies the following assumptions:
+
+- **Sales Person** — identified by the `user_id` field on `sale.order` (user with `sales_team.group_sale_salesman` or `sales_team.group_sale_salesman_all_leads`).
+- **Team Leader** — the leader of the sales team assigned to the quotation (`team_id.user_id`).
+- **Sales Manager** — any user in the `sales_team.group_sale_manager` group (*Sales / Administrator*).
+- **Finance Manager** — any user in the `account.group_account_manager` group (*Invoicing / Administrator*).
+
+### Repository structure
+
+```text
+mvillage-test/
+├── addons/
+│   └── sale_quotation_approval/   # Custom Odoo module
+│       ├── models/                # sale.order & sale.order.line extensions
+│       ├── views/                 # Form view, tree view, ribbon, action buttons
+│       ├── security/              # Access control
+│       ├── readme/                # OCA readme fragments
+│       ├── static/                # Static assets / backend components
+│       └── tests/                 # Unit tests
+├── config/
+│   └── odoo.conf                  # Odoo server configuration
+├── docker/
+│   └── entrypoint.sh              # Container entrypoint
+├── docker-compose.yml             # Development environment
+├── docker-compose.debug.yml       # Debug variant (debugpy on port 5678)
+├── Dockerfile                     # Custom Odoo image build
+├── .env.example                   # Environment variable template
+├── requirements.txt               # Python dependencies
+└── tools/                         # Helper scripts
+```
 
 ## Installation
 
@@ -59,7 +92,7 @@ Default variables:
 | `POSTGRES_DB` | `postgres` |
 | `ODOO_PORT` | `8069` |
 | `ODOO_CHAT_PORT` | `8072` |
-| `DEBUGPY_PORT` | `5678` (debug variant only) |
+| `DEBUGPY_PORT` | `5678` |
 
 #### 3. Start the services
 
@@ -82,18 +115,7 @@ This creates two services:
 
 ## Use Cases / Context
 
-In many organizations, salespeople may offer deep discounts or sell below cost to close a deal. Without a systematic check, these quotations can be sent to customers or confirmed as sales orders without management oversight, leading to margin erosion.
-
-This module addresses that gap by automatically computing the cost margin on every quotation and routing it through the appropriate approval levels before the quotation can be emailed or confirmed. The enforcement is built into the Odoo workflow — no external tools or manual checklists required.
-
-### Role resolution
-
-The original requirements do not specify which Odoo groups map to each role. This implementation applies the following assumptions:
-
-- **Sales Person** — identified by the `user_id` field on `sale.order` (user with `sales_team.group_sale_salesman` or `sales_team.group_sale_salesman_all_leads`).
-- **Team Leader** — the leader of the sales team assigned to the quotation (`team_id.user_id`).
-- **Sales Manager** — any user in the `sales_team.group_sale_manager` group (*Sales / Administrator*).
-- **Finance Manager** — any user in the `account.group_account_manager` group (*Invoicing / Administrator*).
+This module controls the quotation approval process in low-margin scenarios, ensuring that sending and confirming quotations always complies with internal profit policies and role-based authorization.
 
 ## Configure
 
@@ -164,17 +186,18 @@ When `Total Cost ≥ Total Amount`:
 
 Any approver with current authority can click **Reject**.
 
-1. The quotation moves to **Rejected** state and becomes editable again.
-2. The Sales Person can revise the quotation content.
-3. The Sales Person clicks **Submit Approval** to restart the approval process from the beginning.
+1. The quotation moves to **Rejected** state.
+2. The Sales Person clicks **Reset Approval** to exit the approval flow.
+3. After reset, the quotation content becomes editable again.
+4. If the quotation still falls under the approval policy, the approval process must be restarted from the beginning.
 
 ### Read-only locking
 
 Once a quotation enters the approval flow:
 
-- Order line content is locked (read-only) until the quotation is rejected.
+- Order line content is locked (read-only).
 - **Send by Email** and **Confirm** are blocked until the status reaches *Approved*.
-- The quotation cannot be reset to draft or cancelled while in the approval flow, except through the reject path.
+- The quotation cannot be reset to draft or cancelled while in the approval flow, except through the reject → reset path.
 
 ### Approval tracking
 
@@ -183,6 +206,8 @@ Once a quotation enters the approval flow:
 - **Chatter** — all state transitions are logged via Odoo's tracking mechanism.
 
 ## Credits
+
+The module-level `README.rst` is auto-generated following OCA conventions. To update the module documentation, edit the fragments in `addons/sale_quotation_approval/readme/` rather than modifying `README.rst` directly.
 
 - License: [LGPL-3.0](LICENSE)
 

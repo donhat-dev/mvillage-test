@@ -372,19 +372,21 @@ ul.auto-toc {
 <p><a class="reference external image-reference" href="https://odoo-community.org/page/development-status"><img alt="Beta" src="https://img.shields.io/badge/maturity-Beta-yellow.png" /></a> <a class="reference external image-reference" href="http://www.gnu.org/licenses/lgpl-3.0-standalone.html"><img alt="License: LGPL-3" src="https://img.shields.io/badge/licence-LGPL--3-blue.png" /></a> <a class="reference external image-reference" href="https://github.com/OCA/mvillage-test/tree/18.0/sale_quotation_approval"><img alt="OCA/mvillage-test" src="https://img.shields.io/badge/github-OCA%2Fmvillage--test-lightgray.png?logo=github" /></a> <a class="reference external image-reference" href="https://translation.odoo-community.org/projects/mvillage-test-18-0/mvillage-test-18-0-sale_quotation_approval"><img alt="Translate me on Weblate" src="https://img.shields.io/badge/weblate-Translate%20me-F47D42.png" /></a> <a class="reference external image-reference" href="https://runboat.odoo-community.org/builds?repo=OCA/mvillage-test&amp;target_branch=18.0"><img alt="Try me on Runboat" src="https://img.shields.io/badge/runboat-Try%20me-875A7B.png" /></a></p>
 <div class="section" id="sale-quotation-approval-1">
 <h1>Sale Quotation Approval</h1>
-<p>Adds multi-level approval workflow for sale quotations based on cost
-margin analysis.</p>
+<p>Adds a margin-based approval workflow for sale quotations in Odoo 18
+Community.</p>
 <p><strong>Features:</strong></p>
 <ul class="simple">
-<li>Cost field on sale order lines (based on product’s standard price)</li>
-<li>Total Cost summary on sale order</li>
-<li>Multi-level approval workflow:<ul>
-<li>No approval needed when margin &gt; 50%</li>
-<li>Team Leader approval when margin ≤ 50%</li>
-<li>Full 3-level approval (Team Leader → Sales Manager → Finance
-Manager) when selling below cost</li>
-</ul>
-</li>
+<li>Computed <strong>Cost</strong> field on each sale order line
+(<tt class="docutils literal">standard_price × quantity</tt>)</li>
+<li>Aggregated <strong>Total Cost</strong> on the sale order</li>
+<li>Automatic approval-level determination based on the relationship
+between Total Cost and Total Amount</li>
+<li><strong>Send by Email</strong> and <strong>Confirm</strong> blocked until the required approval
+is obtained</li>
+<li>Sequential approval through Team Leader, Sales Manager, and Finance
+Manager</li>
+<li>Approval status displayed on form view (ribbon), list view (badge),
+and tracked via Odoo chatter</li>
 </ul>
 <p><strong>Table of contents</strong></p>
 </div>
@@ -396,16 +398,18 @@ Community.</p>
 </div>
 <div class="section" id="configuration">
 <h1>Configuration</h1>
-<p>After installing the module, assign users to the appropriate approval
-groups under <strong>Settings → Users &amp; Companies → Users → (select user) →
-Other</strong>:</p>
+<p>After installing the module, configure approvers according to the
+business roles used by the implementation:</p>
 <ul class="simple">
-<li><strong>Quotation Approval / Team Leader</strong> — can approve quotations that
-require Team Leader sign-off.</li>
-<li><strong>Quotation Approval / Sales Manager</strong> — can approve at the Sales
-Manager level in the full 3-level flow.</li>
-<li><strong>Quotation Approval / Finance Manager</strong> — provides the final approval
-when selling below cost.</li>
+<li><strong>Sales Person</strong> — the quotation owner (<tt class="docutils literal">user_id</tt> on
+<tt class="docutils literal">sale.order</tt>), using the standard sales user access rights.</li>
+<li><strong>Team Leader</strong> — the first approver, resolved from the sales team
+assigned to the quotation (<tt class="docutils literal">team_id.user_id</tt>). Configure this under
+<strong>Sales → Configuration → Sales Teams</strong>.</li>
+<li><strong>Sales Manager</strong> — a user in the <tt class="docutils literal">sales_team.group_sale_manager</tt>
+group, who approves the second step of the full 3-level flow.</li>
+<li><strong>Finance Manager</strong> — a user in the <tt class="docutils literal">account.group_account_manager</tt>
+group, who provides the final approval when selling at or below cost.</li>
 </ul>
 <p>Products must have a <strong>Cost</strong> (<tt class="docutils literal">standard_price</tt>) set for the approval
 level to be computed correctly.</p>
@@ -420,13 +424,14 @@ the tax totals.</p>
 </div>
 <div class="section" id="approval-workflow">
 <h2>Approval workflow</h2>
-<p>When a salesperson creates or modifies a quotation, the system
-automatically computes the required <strong>Approval Level</strong> based on margin:</p>
+<p>When a Sales Person creates or modifies a quotation, the system
+automatically computes the required <strong>Approval Level</strong> based on the
+relationship between Total Cost and Total Amount:</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="38%" />
-<col width="24%" />
-<col width="38%" />
+<col width="54%" />
+<col width="18%" />
+<col width="29%" />
 </colgroup>
 <thead valign="bottom">
 <tr><th class="head">Condition</th>
@@ -435,43 +440,40 @@ automatically computes the required <strong>Approval Level</strong> based on mar
 </tr>
 </thead>
 <tbody valign="top">
-<tr><td>Total Cost &lt; 66.7 % of
-Amount Total (margin &gt;
-50 %)</td>
+<tr><td><tt class="docutils literal">Total Amount &gt; Total Cost + 50 % Total Cost</tt></td>
 <td>None</td>
-<td>Confirm directly</td>
+<td>Send or confirm directly</td>
 </tr>
-<tr><td>Total Cost ≥ 66.7 % of
-Amount Total (margin ≤
-50 %)</td>
+<tr><td><tt class="docutils literal">Total Amount ≤ Total Cost + 50 % Total Cost</tt>
+<strong>and</strong> <tt class="docutils literal">Total Amount &gt; Total Cost</tt></td>
 <td>Team Leader</td>
-<td>Team Leader → Confirm</td>
+<td>Team Leader approves →
+continue</td>
 </tr>
-<tr><td>Total Cost ≥ Amount
-Total (selling at or
-below cost)</td>
+<tr><td><tt class="docutils literal">Total Cost ≥ Total Amount</tt></td>
 <td>Full 3-Level</td>
 <td>Team Leader → Sales
 Manager → Finance
-Manager → Confirm</td>
+Manager</td>
 </tr>
 </tbody>
 </table>
 <div class="section" id="step-by-step">
 <h3>Step-by-step</h3>
 <ol class="arabic simple">
-<li>Salesperson clicks <strong>Request Approval</strong> on the quotation.</li>
+<li>Sales Person clicks <strong>Submit Approval</strong> on the quotation.</li>
 <li>The quotation enters <em>Pending Approval</em> state; order lines become
 read-only.</li>
-<li>The Team Leader clicks <strong>Approve</strong> (or <strong>Reject</strong>).</li>
+<li>The Team Leader of the assigned sales team clicks <strong>Team Lead
+Approve</strong> (or <strong>Reject</strong>).</li>
 <li>If the approval level is <em>Full 3-Level</em>, the flow continues to Sales
 Manager and then Finance Manager.</li>
-<li>Once fully approved, the salesperson can <strong>Confirm</strong> the quotation as
-usual.</li>
+<li>Once fully approved, the Sales Person can <strong>Send by Email</strong> or
+<strong>Confirm</strong> the quotation as usual.</li>
 </ol>
-<p>A <strong>Reject</strong> at any stage resets the state to <em>Rejected</em>. The
-salesperson can revise the quotation and click <strong>Submit Approval</strong> to
-re-submit.</p>
+<p>A <strong>Reject</strong> at any stage resets the state to <em>Rejected</em>. The Sales
+Person can click <strong>Reset Approval</strong>, revise the quotation, and submit it
+again from the beginning.</p>
 </div>
 </div>
 <div class="section" id="list-view">
