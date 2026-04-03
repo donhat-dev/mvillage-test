@@ -193,29 +193,3 @@ Once a quotation enters the approval flow:
 ## Contributors
 
 - donhat-dev — <donhat.hn@gmail.com>
-
-## Repository structure
-
-```text
-mvillage-test/
-├── addons/
-│   └── sale_quotation_approval/   # Custom Odoo module
-│       ├── models/                # sale.order & sale.order.line extensions
-│       ├── views/                 # Form view, tree view, ribbon, action buttons
-│       ├── security/              # Access control
-│       ├── readme/                # OCA readme fragments
-│       ├── static/                # Static assets / backend components
-│       └── tests/                 # Unit tests
-├── config/
-│   └── odoo.conf                  # Odoo server configuration
-├── docker/
-│   └── entrypoint.sh              # Container entrypoint
-├── docker-compose.yml             # Development environment
-├── docker-compose.debug.yml       # Debug variant (debugpy on port 5678)
-├── Dockerfile                     # Custom Odoo image build
-├── .env.example                   # Environment variable template
-├── requirements.txt               # Python dependencies
-└── tools/                         # Helper scripts
-```
-
-> **Note:** The module-level `README.rst` is auto-generated following OCA conventions. To update module documentation, edit the fragments in `addons/sale_quotation_approval/readme/` rather than modifying `README.rst` directly.
